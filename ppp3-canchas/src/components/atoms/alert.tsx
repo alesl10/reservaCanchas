@@ -2,7 +2,6 @@ import Swal from 'sweetalert2'
 
 type Tipo = 'success' | 'error' | 'warning' | 'info'
 
-// Toast en la esquina superior derecha, autocierre con barra de progreso.
 const Toast = Swal.mixin({
   toast: true,
   position: 'bottom-end',

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { AuthService, CanchasService, PagosService, ReservasService } from '@/services'
 import { useAuth } from '@/context'
+import { markdownATextoPlano } from '@/utils'
 import type { ChatMensaje, ChatReservaCreada, EstadoAccionChat, MetodoPago } from '@/types'
 
 const SALUDO_INICIAL: ChatMensaje =
@@ -60,7 +61,7 @@ export function useChatCanchas() {
         ...m,
         {
           rol: 'bot',
-          texto: data.respuesta,
+          texto: markdownATextoPlano(data.respuesta),
           canchas: data.canchas,
           accion: data.accionPendiente ? { ...data.accionPendiente, estado: 'pendiente' } : undefined,
         },

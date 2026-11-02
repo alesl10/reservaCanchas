@@ -10,7 +10,6 @@ export function Footer() {
     >
       <div className="max-w-7xl mx-auto px-6 py-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-10">
-          {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-lg">
@@ -26,7 +25,6 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Links */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 tracking-wide uppercase text-xs text-slate-400">
               Navegación
@@ -50,7 +48,6 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
             <h4 className="text-white font-semibold text-sm mb-4 tracking-wide uppercase text-xs text-slate-400">
               Contacto

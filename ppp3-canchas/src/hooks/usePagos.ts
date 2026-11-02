@@ -3,7 +3,6 @@ import { PagosService } from '@/services'
 import { useFetch } from './useFetch'
 import type { SaldoReserva } from '@/types'
 
-// Pagos + saldo pendiente de una reserva (GET /pagos?reservaId=).
 export function usePagosReserva(reservaId: number) {
   return useFetch<SaldoReserva>(
     () => PagosService.obtenerPorReserva(reservaId),
@@ -11,7 +10,6 @@ export function usePagosReserva(reservaId: number) {
   )
 }
 
-// Saldo (abonado / pendiente) de varias reservas a la vez. Una consulta por reserva en paralelo.
 export function useSaldosReservas(reservaIds: number[]) {
   const [saldos, setSaldos] = useState<Record<number, SaldoReserva>>({})
   const [loading, setLoading] = useState(false)
@@ -20,31 +18,34 @@ export function useSaldosReservas(reservaIds: number[]) {
 
   useEffect(() => {
     if (reservaIds.length === 0) {
-      setSaldos({})
       return
     }
     let cancelled = false
-    setLoading(true)
-    Promise.all(
-      reservaIds.map((id) =>
-        PagosService.obtenerPorReserva(id)
-          .then((s) => [id, s] as const)
-          .catch(() => [id, null] as const),
-      ),
-    )
-      .then((entries) => {
-        if (cancelled) return
+    const cargarSaldos = async () => {
+      setLoading(true)
+      const entries = await Promise.all(
+        reservaIds.map((id) =>
+          PagosService.obtenerPorReserva(id)
+            .then((s) => [id, s] as const)
+            .catch(() => [id, null] as const),
+        ),
+      )
+      if (!cancelled) {
         const map: Record<number, SaldoReserva> = {}
         for (const [id, s] of entries) if (s) map[id] = s
         setSaldos(map)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+        setLoading(false)
+      }
+    }
+    void cargarSaldos()
     return () => {
       cancelled = true
     }
   }, [key, trigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { saldos, loading, refrescar: () => setTrigger((t) => t + 1) }
+  return {
+    saldos: reservaIds.length === 0 ? {} : saldos,
+    loading: reservaIds.length > 0 && loading,
+    refrescar: () => setTrigger((t) => t + 1),
+  }
 }

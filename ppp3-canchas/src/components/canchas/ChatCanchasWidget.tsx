@@ -5,9 +5,7 @@ import { ChatAccionReserva } from "./ChatAccionReserva";
 import { MoneyUtils } from "@/utils";
 import { LuSend, LuArrowRight, LuBot, LuX, LuMessageCircle } from "react-icons/lu";
 
-// El chatbot es para clientes buscando cancha: no tiene sentido en /login ni en /admin.
 const RUTAS_OCULTAS = ["/login", "/admin"];
-// Mismo corte que el breakpoint "sm" de Tailwind: debajo, el chat ocupa toda la pantalla.
 const CONSULTA_MOVIL = "(max-width: 639px)";
 
 export function ChatCanchasWidget() {
@@ -63,7 +61,6 @@ export function ChatCanchasWidget() {
                 </p>
               </div>
             </div>
-            {/* Área táctil de 44px (mínimo recomendado para el dedo) */}
             <button
               type="button"
               className="-m-2 p-2.5 text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0"
@@ -74,7 +71,6 @@ export function ChatCanchasWidget() {
             </button>
           </div>
 
-          {/* Celular: ocupa el alto disponible. Escritorio: alto fijo, sin pasarse de la pantalla. */}
           <div className="flex flex-col gap-4 p-4 flex-1 min-h-0 overflow-y-auto overscroll-contain sm:flex-none sm:h-[420px] sm:max-h-[calc(100dvh-14rem)]">
             {mensajes.map((m, i) => (
               <div key={i} className={`flex flex-col ${m.rol === "usuario" ? "items-end" : "items-start"}`}>

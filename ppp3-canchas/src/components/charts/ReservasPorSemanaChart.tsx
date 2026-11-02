@@ -9,7 +9,6 @@ const PLOT_W = W - MARGIN.left - MARGIN.right;
 const PLOT_H = H - MARGIN.top - MARGIN.bottom;
 
 function etiquetaSemana(semana: string): string {
-  // "YYYY-MM-DD" -> "DD/MM"
   return `${semana.slice(8, 10)}/${semana.slice(5, 7)}`;
 }
 

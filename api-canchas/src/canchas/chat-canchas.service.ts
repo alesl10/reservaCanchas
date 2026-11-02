@@ -192,8 +192,6 @@ export class ChatCanchasService {
     };
   }
 
-  // ---------------------------------------------------------------- agente
-
   /** Ciclo "el modelo pide herramienta → la ejecutamos → le devolvemos el resultado". */
   private async conversarConIa(dto: ChatCanchasDto, ctx: Contexto): Promise<string | null> {
     const contents: unknown[] = [{ role: 'user', parts: [{ text: this.armarMensajeUsuario(dto) }] }];
@@ -261,8 +259,6 @@ Reglas:
       .join('\n');
     return `${previo ? `Conversación previa:\n${previo}\n\n` : ''}Mensaje actual del usuario: "${dto.mensaje}"`;
   }
-
-  // ------------------------------------------------------------ herramientas
 
   private async ejecutarHerramienta(nombre: string, args: Record<string, any>, ctx: Contexto): Promise<unknown> {
     try {
@@ -398,8 +394,6 @@ Reglas:
         : 'Mostrale el resumen, decile que inicie sesión con el formulario del chat y que después confirme con el botón. La reserva todavía NO está creada.',
     };
   }
-
-  // ------------------------------------------------------------------ helpers
 
   private filtrar(ctx: Contexto, f: Filtros, limite: number): CanchaChat[] {
     const hayUbicacion = ctx.lat != null && ctx.lng != null;
@@ -599,8 +593,6 @@ Reglas:
     const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
-
-  // --------------------------------------------------------------- sin Gemini
 
   /**
    * Fallback si Gemini no está disponible: parseo por palabras clave (formato, techada y

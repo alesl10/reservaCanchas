@@ -1,8 +1,6 @@
 import { LuTrendingUp, LuTrendingDown, LuMinus } from "react-icons/lu";
 import type { ReservasPorSemana } from "@/types";
 
-// Stat tile: un número no necesita ni merece una torta o una barra — es la forma
-// correcta cuando el dato es "el valor actual (+ tal vez una tendencia)".
 export function StatTileReservas({
   totalActual,
   variacionPorcentual,
@@ -22,8 +20,6 @@ export function StatTileReservas({
         <p className="text-[34px] font-extrabold text-slate-900 leading-none tracking-tight">{totalActual}</p>
       </div>
 
-      {/* El sparkline crece con el alto disponible de la card en vez de quedar
-          flotando en una esquina con todo el resto del widget vacío. */}
       <div className="flex-1 min-h-[36px] mt-2">
         <Sparkline data={porSemana} />
       </div>
