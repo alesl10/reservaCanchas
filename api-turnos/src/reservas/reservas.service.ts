@@ -163,6 +163,21 @@ export class ReservasService {
     await this.reservaRepo.delete(id);
   }
 
+  async removePorCliente(clienteId: number) {
+    await this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(Reserva);
+      // Las activas se pasan a "cancelada" (con motivo) antes de borrarlas; sin mails: el
+      // cliente se está eliminando y ya no tendría a quién avisarle.
+      await repo
+        .createQueryBuilder()
+        .update()
+        .set({ estado: 'cancelada', fechaCancelacion: new Date(), razonCancelacion: 'Cliente eliminado' })
+        .where('clienteId = :clienteId AND estado IN (:...estados)', { clienteId, estados: ['pendiente', 'confirmada'] })
+        .execute();
+      await repo.delete({ clienteId });
+    });
+  }
+
   // -----------------------------------------------
   // Validaciones (antes eran triggers en Supabase)
   // -----------------------------------------------

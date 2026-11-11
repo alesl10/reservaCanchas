@@ -72,6 +72,21 @@ export class ReservasController {
     return this.reservasService.updateEstado(id, dto, this.ownerId(rol, clienteId));
   }
 
+  // DELETE /reservas?clienteId=N — borra TODAS las reservas de un cliente (las pendientes y
+  // confirmadas se cancelan antes). Lo usa api-usuarios al eliminar un cliente (llamada interna,
+  // sin rol) y el admin; un cliente no puede.
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removePorCliente(
+    @Query('clienteId', ParseIntPipe) clienteId: number,
+    @Headers('x-user-rol') rol?: string,
+  ) {
+    if (rol !== undefined && rol !== 'admin') {
+      throw new ForbiddenException('Solo un administrador puede eliminar reservas');
+    }
+    return this.reservasService.removePorCliente(clienteId);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(

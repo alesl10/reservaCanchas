@@ -90,7 +90,26 @@ export function Header() {
     </>
   );
 
-  const navLinks = isAdmin ? adminLinks : isCliente ? clienteLinks : null;
+  const publicLinks = (
+    <>
+      <NavLink
+        to="/"
+        active={isActive("/")}
+        icon={<LuAlignJustify size={15} />}
+        label="Inicio"
+        onClick={() => setMobileOpen(false)}
+      />
+      <NavLink
+        to="/reservar"
+        active={isActive("/reservar")}
+        icon={<LuCalendar size={15} />}
+        label="Reservar"
+        onClick={() => setMobileOpen(false)}
+      />
+    </>
+  );
+
+  const navLinks = isAdmin ? adminLinks : isCliente ? clienteLinks : publicLinks;
 
   const sessionBlock = sesion ? (
     <div className="flex items-center gap-2 ml-3 pl-3 border-l border-white/15">
@@ -141,7 +160,7 @@ export function Header() {
     >
       <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-5 h-16 flex justify-between items-center">
+      <div className="w-full px-4 sm:px-8 h-16 flex justify-between items-center">
         <Link
           to={sesion ? (isAdmin ? "/admin" : "/") : "/"}
           className="flex items-center gap-2.5 group shrink-0"

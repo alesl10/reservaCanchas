@@ -154,7 +154,7 @@ export function CanchasMapa({ canchas }: { canchas: Cancha[] }) {
                     {MoneyUtils.formatear(c.precioPorHora)}
                     <span className="text-[11px] text-slate-400 font-medium">/hora</span>
                   </span>
-                  <button type="button" className="btn btn-primary text-[12px] py-1 mt-1" onClick={() => navigate("/reservar")}>
+                  <button type="button" className="btn btn-primary text-[12px] py-1 mt-1" onClick={() => navigate(`/reservar?cancha=${c.id}`)}>
                     Reservar <LuArrowRight size={12} />
                   </button>
                 </div>

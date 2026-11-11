@@ -74,26 +74,31 @@ export class ClientesService {
 
   // No se permite borrar un cliente con reservas (dueño: api-turnos). Las reservas no tienen FK a
   // clientes (acoplamiento débil entre microservicios), así que la integridad se valida acá.
+  /**
+   * Elimina al cliente y su cuenta de acceso. Sus reservas (dueño: api-turnos) se cancelan y
+   * se eliminan primero, aunque estén pendientes o confirmadas. Si api-turnos no responde NO se
+   * borra nada: el cliente y sus reservas quedan como estaban.
+   */
   async remove(id: number) {
-    await this.findOne(id);
+    const cliente = await this.findOne(id);
 
-    let reservas: any[];
     try {
-      const { data } = await firstValueFrom(
-        this.httpService.get(`${this.turnosUrl}/reservas`, { params: { clienteId: id } }),
+      await firstValueFrom(
+        this.httpService.delete(`${this.turnosUrl}/reservas`, { params: { clienteId: id } }),
       );
-      reservas = Array.isArray(data) ? data : [];
     } catch {
       throw new ServiceUnavailableException(
-        'No se pudo verificar las reservas del cliente; intentá más tarde',
+        'No se pudieron eliminar las reservas del cliente; no se borró nada. Intentá más tarde',
       );
     }
 
-    if (reservas.length > 0) {
-      throw new ConflictException('No se puede eliminar un cliente con reservas asociadas');
-    }
-
-    await this.clienteRepo.delete(id);
+    await this.dataSource.transaction(async (manager) => {
+      await manager.delete(Cliente, id);
+      // La cuenta de login (solo si es de un cliente: nunca se borra un admin por acá).
+      if (cliente.usuarioId) {
+        await manager.query("DELETE FROM usuarios WHERE id = $1 AND rol = 'cliente'", [cliente.usuarioId]);
+      }
+    });
   }
 
   // Estadísticas derivadas de las reservas (dueño: api-turnos). No se almacenan en el cliente.

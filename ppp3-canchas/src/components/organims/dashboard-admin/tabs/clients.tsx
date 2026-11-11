@@ -263,7 +263,7 @@ export function ClientesTab() {
             <strong>
               {confirmDelete.nombre} {confirmDelete.apellido}
             </strong>
-            ? Esta acción no se puede deshacer. No se podrá eliminar si tiene reservas asociadas.
+            ? Esta acción no se puede deshacer: también se cancelarán y eliminarán todas sus reservas (incluidas las pendientes) y su cuenta de acceso.
           </p>
         </Modal>
       )}

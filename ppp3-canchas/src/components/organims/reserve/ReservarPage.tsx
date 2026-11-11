@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { PublicLayout } from "@/components";
+import { useAuth } from "@/context";
 import { Paso1Cliente } from "./Paso1Cliente";
 import { Paso2Horario } from "./Paso2Horario";
 import { Paso3Resumen } from "./Paso3Resumen";
@@ -25,11 +27,58 @@ export interface DatosReserva {
   observaciones: string;
 }
 
+// Selección guardada al mandar al visitante a loguearse: al volver se retoma en la confirmación.
+const CLAVE_PENDIENTE = "reservaPendiente";
+const VIGENCIA_PENDIENTE_MS = 30 * 60 * 1000;
+
+function leerPendiente(): DatosReserva | null {
+  try {
+    const raw = sessionStorage.getItem(CLAVE_PENDIENTE);
+    if (!raw) return null;
+    sessionStorage.removeItem(CLAVE_PENDIENTE);
+    const { reserva, guardadaEn } = JSON.parse(raw);
+    if (Date.now() - guardadaEn > VIGENCIA_PENDIENTE_MS) return null;
+    return reserva as DatosReserva;
+  } catch {
+    return null;
+  }
+}
+
 export function ReservarPage() {
-  const [paso, setPaso] = useState<1 | 2 | 3 | 4>(1);
-  const [cliente, setCliente] = useState<DatosCliente | null>(null);
-  const [reserva, setReserva] = useState<DatosReserva | null>(null);
+  const { sesion } = useAuth();
+  const navigate = useNavigate();
+  const esCliente = sesion?.rol === "cliente";
+
+  // Cliente que vuelve del login con una selección pendiente: va directo a confirmar.
+  const [pendiente] = useState<DatosReserva | null>(() => (esCliente ? leerPendiente() : null));
+  const [paso, setPaso] = useState<1 | 2 | 3 | 4>(pendiente ? 3 : sesion ? 1 : 2);
+  const [cliente, setCliente] = useState<DatosCliente | null>(
+    pendiente && sesion
+      ? {
+          id: sesion.clienteId,
+          nombre: sesion.nombre,
+          apellido: sesion.apellido,
+          telefono: sesion.telefono,
+          email: sesion.email,
+          esNuevo: !sesion.clienteId,
+        }
+      : null,
+  );
+  const [reserva, setReserva] = useState<DatosReserva | null>(pendiente);
   const [reservaCreada, setReservaCreada] = useState<Reserva | null>(null);
+
+  if (sesion?.rol === "admin") return <Navigate to="/admin" replace />;
+
+  function pedirLogin() {
+    if (reserva) {
+      try {
+        sessionStorage.setItem(CLAVE_PENDIENTE, JSON.stringify({ reserva, guardadaEn: Date.now() }));
+      } catch {
+        /* sin sessionStorage el visitante simplemente rehace la selección */
+      }
+    }
+    navigate("/login");
+  }
 
   return (
     <PublicLayout>
@@ -42,19 +91,19 @@ export function ReservarPage() {
                 <div
                   className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-extrabold text-[15px] transition-all duration-300
                   ${
-                    paso >= p.n
+                    paso >= p.n && !(p.n === 1 && !sesion)
                       ? "text-white shadow-lg shadow-brand-600/30"
                       : "bg-slate-100 text-slate-400"
                   }`}
                   style={
-                    paso >= p.n
+                    paso >= p.n && !(p.n === 1 && !sesion)
                       ? {
                           background: "linear-gradient(135deg,#059669,#047857)",
                         }
                       : {}
                   }
                 >
-                  {paso > p.n ? "✓" : p.n}
+                  {paso > p.n && !(p.n === 1 && !sesion) ? "✓" : p.n}
                 </div>
                 <span
                   className={`text-[11px] font-semibold mt-1.5 whitespace-nowrap transition-colors
@@ -86,12 +135,14 @@ export function ReservarPage() {
                 setReserva(d);
                 setPaso(3);
               }}
-              onBack={() => setPaso(1)}
+              // Sin sesión no hay paso de datos al que volver.
+              onBack={sesion ? () => setPaso(1) : undefined}
             />
           )}
-          {paso === 3 && cliente && reserva && (
+          {paso === 3 && reserva && (cliente || !sesion) && (
             <Paso3Resumen
               cliente={cliente}
+              onRequireLogin={pedirLogin}
               reserva={reserva}
               onBack={() => setPaso(2)}
               onCreated={(r) => {

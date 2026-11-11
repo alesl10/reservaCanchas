@@ -87,7 +87,7 @@ export function CanchaCard({
         {mode === "public" ? (
           <button
             className="btn btn-primary btn-block group-hover:bg-brand-800 transition-colors"
-            onClick={() => navigate("/reservar")}
+            onClick={() => navigate(`/reservar?cancha=${cancha.id}`)}
           >
             Reservar Ahora
             <LuArrowRight size={15} />

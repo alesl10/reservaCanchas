@@ -54,14 +54,8 @@ export default function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route
-                path="/reservar"
-                element={
-                  <ProtectedRoute requiredRole="cliente">
-                    <ReservarPage />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Pública: se pueden ver canchas y horarios sin sesión; el login se pide al confirmar. */}
+              <Route path="/reservar" element={<ReservarPage />} />
               <Route
                 path="/mis-reservas"
                 element={

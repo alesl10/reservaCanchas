@@ -7,13 +7,14 @@ import type { Reserva } from "@/types";
 import type { DatosCliente, DatosReserva } from "./ReservarPage";
 
 interface Props {
-  cliente: DatosCliente;
+  cliente: DatosCliente | null;
+  onRequireLogin: () => void;
   reserva: DatosReserva;
   onBack: () => void;
   onCreated: (reserva: Reserva) => void;
 }
 
-export function Paso3Resumen({ cliente, reserva, onBack, onCreated }: Props) {
+export function Paso3Resumen({ cliente, reserva, onBack, onCreated, onRequireLogin }: Props) {
   const { mostrar, AlertComponent } = useAlert();
   const { sesion, login } = useAuth();
   const [observaciones, setObservaciones] = useState("");
@@ -27,6 +28,7 @@ export function Paso3Resumen({ cliente, reserva, onBack, onCreated }: Props) {
   const sena = MoneyUtils.calcularSena(precioTotal);
 
   async function confirmar() {
+    if (!cliente) return onRequireLogin();
     setEnviando(true);
     try {
       let clienteId = cliente.id;
@@ -100,15 +102,21 @@ export function Paso3Resumen({ cliente, reserva, onBack, onCreated }: Props) {
       {AlertComponent}
       <h2 className="text-lg font-bold text-slate-900 mb-1">Paso 3: Confirmación</h2>
       <p className="text-sm text-slate-400 mb-6">
-        Revisá los datos antes de confirmar tu reserva.
+        {cliente
+          ? "Revisá los datos antes de confirmar tu reserva."
+          : "Ese horario está disponible. Iniciá sesión o creá tu cuenta para confirmarlo; tu selección se conserva."}
       </p>
 
       <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-50 rounded-xl p-4 border border-slate-100">
-        <InfoRow
-          label="Cliente"
-          value={`${cliente.nombre} ${cliente.apellido}`}
-        />
-        <InfoRow label="Teléfono" value={cliente.telefono} />
+        {cliente && (
+          <>
+            <InfoRow
+              label="Cliente"
+              value={`${cliente.nombre} ${cliente.apellido}`}
+            />
+            <InfoRow label="Teléfono" value={cliente.telefono} />
+          </>
+        )}
         <InfoRow label="Cancha" value={reserva.cancha.nombre} />
         <InfoRow
           label="Fecha"
@@ -170,7 +178,7 @@ export function Paso3Resumen({ cliente, reserva, onBack, onCreated }: Props) {
           onClick={confirmar}
           disabled={enviando}
         >
-          {enviando ? "Procesando…" : "Continuar al pago →"}
+          {enviando ? "Procesando…" : cliente ? "Continuar al pago →" : "Iniciar sesión para confirmar →"}
         </button>
       </div>
     </div>

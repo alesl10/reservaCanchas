@@ -56,7 +56,7 @@ export function HomePage() {
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               className="btn btn-white btn-large"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/reservar")}
             >
               Hacer una Reserva
               <LuArrowRight size={17} />
@@ -85,7 +85,7 @@ export function HomePage() {
         </div>
       </section>
       <section className="py-24 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="w-full px-6 sm:px-8">
           <p className="text-center text-brand-600 text-sm font-bold uppercase tracking-widest mb-2">
             Ventajas
           </p>
@@ -123,7 +123,7 @@ export function HomePage() {
         </div>
       </section>
       <section id="mapa" className="py-24 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="w-full px-6 sm:px-8">
           <p className="text-center text-brand-600 text-sm font-bold uppercase tracking-widest mb-2">
             Ubicaciones
           </p>
@@ -136,7 +136,7 @@ export function HomePage() {
       </section>
 
       <section id="canchas" className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
+        <div className="w-full px-6 sm:px-8">
           <p className="text-center text-brand-600 text-sm font-bold uppercase tracking-widest mb-2">
             Instalaciones
           </p>
@@ -166,7 +166,7 @@ export function HomePage() {
       </section>
 
       <section className="py-24 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="w-full px-6 sm:px-8">
           <p className="text-center text-brand-600 text-sm font-bold uppercase tracking-widest mb-2">
             Proceso
           </p>
@@ -206,7 +206,7 @@ export function HomePage() {
           <div className="text-center mt-14">
             <button
               className="btn btn-primary btn-large"
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/reservar")}
             >
               Hacer mi primera reserva
               <LuArrowRight size={17} />
@@ -216,7 +216,7 @@ export function HomePage() {
       </section>
 
       <section className="py-20 bg-white border-t border-slate-100">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="w-full px-6 sm:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {CARDS?.map((c) => (
               <div

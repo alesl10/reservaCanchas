@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CanchasService, ReservasService } from "@/services";
 import { DateUtils, HorarioUtils, MoneyUtils } from "@/utils";
 import { Spinner } from "@/components";
@@ -9,7 +10,7 @@ import type { DatosReserva } from "./ReservarPage";
 
 interface Props {
   onNext: (datos: DatosReserva) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 type Errors = {
@@ -29,7 +30,10 @@ function FieldError({ msg }: { msg: string }) {
 export function Paso2Horario({ onNext, onBack }: Props) {
   const [canchas, setCanchas] = useState<Cancha[]>([]);
   const [cargandoCanchas, setCargandoCanchas] = useState(true);
-  const [canchaId, setCanchaId] = useState<number | "">("");
+  // Viene de "Reservar Ahora" de una cancha concreta (?cancha=ID): queda preseleccionada.
+  const [searchParams] = useSearchParams();
+  const canchaInicial = Number(searchParams.get("cancha")) || "";
+  const [canchaId, setCanchaId] = useState<number | "">(canchaInicial);
   const [fecha, setFecha] = useState(DateUtils.fechaHoy());
   const [horaInicio, setHoraInicio] = useState("");
   const [horaFin, setHoraFin] = useState("");
@@ -39,7 +43,12 @@ export function Paso2Horario({ onNext, onBack }: Props) {
 
   useEffect(() => {
     CanchasService.obtenerTodas()
-      .then((data) => setCanchas(data.filter((c) => c.estado === "disponible")))
+      .then((data) => {
+        const disponibles = data.filter((c) => c.estado === "disponible");
+        setCanchas(disponibles);
+        // Si la cancha pedida ya no está disponible (o no existe), se elige a mano.
+        setCanchaId((actual) => (actual && disponibles.some((c) => c.id === actual) ? actual : ""));
+      })
       .finally(() => setCargandoCanchas(false));
   }, []);
 
@@ -129,7 +138,7 @@ export function Paso2Horario({ onNext, onBack }: Props) {
 
   return (
     <div className="p-6">
-      <h2 className="text-lg font-bold text-slate-900 mb-1">Paso 2: Cancha y Horario</h2>
+      <h2 className="text-lg font-bold text-slate-900 mb-1">Cancha y Horario</h2>
       <p className="text-sm text-slate-400 mb-6">
         Elegí la cancha, la fecha y el bloque horario que prefieras.
       </p>
@@ -286,9 +295,13 @@ export function Paso2Horario({ onNext, onBack }: Props) {
       )}
 
       <div className="flex justify-between mt-6 pt-4 border-t border-slate-100">
-        <button type="button" className="btn btn-outline" onClick={onBack}>
-          ← Volver
-        </button>
+        {onBack ? (
+          <button type="button" className="btn btn-outline" onClick={onBack}>
+            ← Volver
+          </button>
+        ) : (
+          <span />
+        )}
         <button type="button" className="btn btn-primary" onClick={siguiente}>
           Siguiente →
         </button>

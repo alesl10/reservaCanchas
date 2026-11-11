@@ -7,6 +7,8 @@ const RUTAS_PUBLICAS: { method: string; path: string }[] = [
   { method: 'POST', path: '/auth/login' },
   { method: 'POST', path: '/auth/registro' },
   { method: 'GET', path: '/canchas' },
+  // Horarios ocupados de una cancha: se ven antes de loguearse (el login se pide al confirmar).
+  { method: 'GET', path: '/disponibilidad' },
   // Chatbot de búsqueda de canchas en el home, antes de loguearse.
   { method: 'POST', path: '/canchas/chat' },
 ];

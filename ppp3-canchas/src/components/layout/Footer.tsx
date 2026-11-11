@@ -8,7 +8,7 @@ export function Footer() {
         background: "linear-gradient(135deg, #022c22 0%, #064e3b 100%)",
       }}
     >
-      <div className="max-w-7xl mx-auto px-6 py-14">
+      <div className="w-full px-6 sm:px-8 py-14">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 mb-10">
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -32,7 +32,7 @@ export function Footer() {
             <ul className="space-y-2.5">
               {[
                 { to: "/", label: "Inicio" },
-                { to: "/login", label: "Reservar una cancha" },
+                { to: "/reservar", label: "Reservar una cancha" },
                 { to: "/login", label: "Mis reservas" },
               ].map((l) => (
                 <li key={l.label}>

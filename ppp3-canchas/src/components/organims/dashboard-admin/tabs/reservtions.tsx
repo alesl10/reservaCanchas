@@ -6,6 +6,7 @@ import { Modal, useAlert } from '@/components'
 import { Select, SelectItem } from '@/components/atoms'
 import { MoneyUtils, ReservaUtils } from '@/utils'
 import { AdminReservationsTable, type AccionItem } from '@/components/organims/tables'
+import { ReservasCalendario } from './reservas-calendario'
 
 interface ConfirmModal {
   id: number
@@ -18,8 +19,10 @@ export function ReservasTab() {
   const { mostrar, AlertComponent } = useAlert()
   const [filtroFecha, setFiltroFecha] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [vista, setVista] = useState<'lista' | 'calendario'>('lista')
   const params: Record<string, string> = {}
-  if (filtroFecha) params.fecha = filtroFecha
+  // El calendario necesita todo el mes: el filtro de un solo día aplica solo al listado.
+  if (filtroFecha && vista === 'lista') params.fecha = filtroFecha
   if (filtroEstado) params.estado = filtroEstado
   const { reservas, loading, error, recargar } = useReservas(params)
   const { canchas } = useCanchas()
@@ -130,11 +133,27 @@ export function ReservasTab() {
       {AlertComponent}
       <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-6">Gestión de Reservas</h1>
 
-      <div className="flex gap-4 mb-6 flex-wrap">
-        <div style={{ margin: 0 }}>
-          <label className="block mb-1.5 text-[13px] font-semibold text-slate-800 tracking-[0.01em]">Fecha</label>
-          <input type="date" className="form-input" value={filtroFecha} onChange={e => setFiltroFecha(e.target.value)} />
+      <div className="flex gap-4 mb-6 flex-wrap items-end">
+        <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1" role="group" aria-label="Vista">
+          {(['lista', 'calendario'] as const).map(v => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={vista === v}
+              onClick={() => setVista(v)}
+              className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold border-none cursor-pointer font-[inherit] transition-colors
+                ${vista === v ? 'bg-brand-700 text-white' : 'bg-transparent text-slate-500 hover:bg-slate-100'}`}
+            >
+              {v === 'lista' ? 'Listado' : 'Calendario'}
+            </button>
+          ))}
         </div>
+        {vista === 'lista' && (
+          <div style={{ margin: 0 }}>
+            <label className="block mb-1.5 text-[13px] font-semibold text-slate-800 tracking-[0.01em]">Fecha</label>
+            <input type="date" className="form-input" value={filtroFecha} onChange={e => setFiltroFecha(e.target.value)} />
+          </div>
+        )}
         <div style={{ margin: 0 }}>
           <label className="block mb-1.5 text-[13px] font-semibold text-slate-800 tracking-[0.01em]">Estado</label>
           <Select value={filtroEstado} onValueChange={setFiltroEstado} placeholder="Todos">
@@ -154,14 +173,18 @@ export function ReservasTab() {
         </div>
       )}
 
-      <AdminReservationsTable
-        reservas={reservasOrdenadas}
-        loading={loading}
-        error={error ?? ''}
-        ordenFecha={ordenFecha}
-        onOrdenFecha={() => setOrdenFecha(v => v === 'desc' ? 'asc' : 'desc')}
-        getAcciones={getAcciones}
-      />
+      {vista === 'lista' ? (
+        <AdminReservationsTable
+          reservas={reservasOrdenadas}
+          loading={loading}
+          error={error ?? ''}
+          ordenFecha={ordenFecha}
+          onOrdenFecha={() => setOrdenFecha(v => v === 'desc' ? 'asc' : 'desc')}
+          getAcciones={getAcciones}
+        />
+      ) : (
+        <ReservasCalendario reservas={reservasOrdenadas} loading={loading} getAcciones={getAcciones} />
+      )}
 
       {confirmModal && (
         <Modal
