@@ -3,7 +3,7 @@ import {
   InternalServerErrorException, ServiceUnavailableException, ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Reserva } from './entities/reserva.entity';
@@ -86,6 +86,8 @@ export class ReservasService {
   async create(dto: CreateReservaDto) {
     this.validarHorario(dto.horaInicio, dto.horaFin);
     await this.validarCancha(dto.canchaId);
+    // Chequeo temprano (barato) para fallar rápido; el definitivo corre dentro de la
+    // transacción con lock, justo antes de guardar.
     await this.validarDisponibilidad(dto.canchaId, dto.fecha, dto.horaInicio, dto.horaFin);
     await this.validarCliente(dto.clienteId);
 
@@ -98,19 +100,36 @@ export class ReservasService {
 
     let guardada: Reserva;
     try {
-      const reserva = this.reservaRepo.create({
-        canchaId: dto.canchaId,
-        clienteId: dto.clienteId,
-        fecha: dto.fecha,
-        horaInicio: dto.horaInicio,
-        horaFin: dto.horaFin,
-        precioTotal,
-        descuentoAplicado: descuento,
-        senaRequerida,
-        observaciones: dto.observaciones,
+      // Verificar disponibilidad + insertar deben ser atómicos: sin esto, dos solicitudes
+      // simultáneas pasan ambas el chequeo y terminan superpuestas. El advisory lock
+      // (por cancha y día) serializa las altas del mismo turno; la restricción EXCLUDE de
+      // la BD (database/schema.sql) es la garantía final aunque el lock se saltee.
+      guardada = await this.dataSource.transaction(async (manager) => {
+        const dia = Math.floor(Date.parse(`${dto.fecha}T00:00:00Z`) / 86_400_000);
+        await manager.query('SELECT pg_advisory_xact_lock($1, $2)', [dto.canchaId, dia]);
+        await this.validarDisponibilidad(dto.canchaId, dto.fecha, dto.horaInicio, dto.horaFin, manager);
+
+        const repo = manager.getRepository(Reserva);
+        return repo.save(
+          repo.create({
+            canchaId: dto.canchaId,
+            clienteId: dto.clienteId,
+            fecha: dto.fecha,
+            horaInicio: dto.horaInicio,
+            horaFin: dto.horaFin,
+            precioTotal,
+            descuentoAplicado: descuento,
+            senaRequerida,
+            observaciones: dto.observaciones,
+          }),
+        );
       });
-      guardada = await this.reservaRepo.save(reserva);
     } catch (error) {
+      if (error instanceof ConflictException) throw error;
+      // 23P01 = exclusion_violation (la restricción de la BD frenó un solapamiento).
+      if ((error as { code?: string })?.code === '23P01') {
+        throw new ConflictException('La cancha ya está reservada en ese horario');
+      }
       throw new InternalServerErrorException('Error al crear la reserva');
     }
     // Fuera del try: un fallo al avisar no puede convertirse en "Error al crear la reserva".
@@ -162,8 +181,11 @@ export class ReservasService {
     if (fin > cierre) throw new BadRequestException(`Horario de cierre: ${HORA_CIERRE}`);
   }
 
-  private async validarDisponibilidad(canchaId: number, fecha: string, horaInicio: string, horaFin: string) {
-    const conflicto = await this.reservaRepo
+  private async validarDisponibilidad(
+    canchaId: number, fecha: string, horaInicio: string, horaFin: string, manager?: EntityManager,
+  ) {
+    const repo = manager ? manager.getRepository(Reserva) : this.reservaRepo;
+    const conflicto = await repo
       .createQueryBuilder('r')
       .where('r.canchaId = :canchaId', { canchaId })
       .andWhere('r.fecha = :fecha', { fecha })

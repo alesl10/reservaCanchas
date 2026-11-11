@@ -1,0 +1,23 @@
+# Solo para el VPS: suma el gateway a la red "edge" del proxy compartido (Caddy con HTTPS),
+# que lo publica en https://api-canchas.<dominio>. En las máquinas del equipo no se usa.
+#
+# Se activa desde el .env del VPS (así `docker compose ...` y scripts/deploy.sh lo toman solos):
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.vps.yml
+#
+# Requiere que exista la red: la crea el proxy compartido (~/edge, ver docs/DEPLOY.md).
+services:
+  gateway:
+    networks:
+      - canchas_net
+      - edge
+
+  # El proxy sirve el frontend en https://<dominio> y manda /api/* al gateway. Los puertos
+  # publicados (5173/3000) siguen andando por IP.
+  frontend:
+    networks:
+      - canchas_net
+      - edge
+
+networks:
+  edge:
+    external: true

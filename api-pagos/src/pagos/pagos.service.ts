@@ -1,6 +1,6 @@
 import {
   Injectable, NotFoundException, BadRequestException,
-  InternalServerErrorException, ServiceUnavailableException,
+  InternalServerErrorException, ServiceUnavailableException, ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -21,6 +21,37 @@ export class PagosService {
     private dataSource: DataSource,
     private httpService: HttpService,
   ) {}
+
+  /** Rol "sin restricción": admin o llamada interna entre servicios (sin x-user-rol). */
+  async exigirAdmin(rol?: string) {
+    if (rol !== undefined && rol !== 'admin') {
+      throw new ForbiddenException('Esta acción es solo para administradores');
+    }
+  }
+
+  /**
+   * Un cliente solo puede operar sobre pagos de sus propias reservas. Se le pregunta a
+   * api-turnos (dueño de la reserva) reenviando rol y cliente_id: su GET /reservas/:id
+   * responde 403 si la reserva no es del cliente y 404 si no existe.
+   */
+  async verificarDuenioReserva(reservaId: number, rol?: string, clienteId?: string) {
+    if (rol === undefined || rol === 'admin') return;
+    if (rol !== 'cliente' || !clienteId) {
+      throw new ForbiddenException('No tenés acceso a esta reserva');
+    }
+    try {
+      await firstValueFrom(
+        this.httpService.get(`${this.turnosUrl}/reservas/${reservaId}`, {
+          headers: { 'x-user-rol': rol, 'x-cliente-id': clienteId },
+        }),
+      );
+    } catch (error) {
+      const status = error.response?.status;
+      if (status === 403) throw new ForbiddenException('No tenés acceso a esta reserva');
+      if (status === 404) throw new NotFoundException(`Reserva ${reservaId} no encontrada`);
+      throw new ServiceUnavailableException('No se pudo verificar la reserva');
+    }
+  }
 
   async findAll(filtros: { reservaId?: number; tipoPago?: string; metodoPago?: string; limite?: number }) {
     const q = this.pagoRepo.createQueryBuilder('p');

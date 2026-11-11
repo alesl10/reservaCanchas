@@ -27,7 +27,8 @@ export class ReservasController {
   ) {
     // Un cliente solo puede ver SUS reservas: forzamos el filtro con el cliente_id del
     // token (inyectado por el gateway), ignorando cualquier clienteId que venga en la query.
-    if (rol === 'cliente' && clienteId) {
+    if (rol === 'cliente') {
+      if (!clienteId) throw new ForbiddenException('Tu sesión no tiene un cliente asociado');
       query.clienteId = +clienteId;
     }
     return this.reservasService.findAll(query);
@@ -44,7 +45,14 @@ export class ReservasController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateReservaDto) {
+  create(
+    @Body() dto: CreateReservaDto,
+    @Headers('x-user-rol') rol?: string,
+    @Headers('x-cliente-id') clienteId?: string,
+  ) {
+    // Un cliente solo reserva a su nombre: se ignora el clienteId del body.
+    const owner = this.ownerId(rol, clienteId);
+    if (owner != null) dto.clienteId = owner;
     return this.reservasService.create(dto);
   }
 
@@ -56,6 +64,11 @@ export class ReservasController {
     @Headers('x-user-rol') rol?: string,
     @Headers('x-cliente-id') clienteId?: string,
   ) {
+    // El cliente solo puede cancelar su reserva; confirmar/completar/no-show es del admin
+    // (la confirmación por seña la hace api-pagos, llamada interna sin rol).
+    if (rol === 'cliente' && dto.estado !== 'cancelada') {
+      throw new ForbiddenException('Solo podés cancelar tus reservas');
+    }
     return this.reservasService.updateEstado(id, dto, this.ownerId(rol, clienteId));
   }
 
@@ -66,12 +79,16 @@ export class ReservasController {
     @Headers('x-user-rol') rol?: string,
     @Headers('x-cliente-id') clienteId?: string,
   ) {
+    if (rol === 'cliente') throw new ForbiddenException('Solo un administrador puede eliminar reservas');
     return this.reservasService.remove(id, this.ownerId(rol, clienteId));
   }
 
   // Devuelve el cliente_id (del token) solo si el rol es cliente; para admin → undefined
   // (sin restricción de dueño). Centraliza la regla usada por los endpoints por-id.
   private ownerId(rol?: string, clienteId?: string): number | undefined {
-    return rol === 'cliente' && clienteId ? +clienteId : undefined;
+    if (rol !== 'cliente') return undefined;
+    // Un cliente sin cliente_id en el token nunca debe caer en el caso "sin restricción".
+    if (!clienteId) throw new ForbiddenException('Tu sesión no tiene un cliente asociado');
+    return +clienteId;
   }
 }

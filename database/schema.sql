@@ -134,6 +134,23 @@ CREATE TABLE IF NOT EXISTS reservas (
   razon_cancelacion  TEXT NULL
 );
 
+-- Garantía final contra reservas superpuestas (aunque dos requests simultáneas pasen la
+-- validación de la app): misma cancha + rango horario que se cruza + reserva activa = rechazo.
+-- api-turnos traduce el error 23P01 a un 409. Es idempotente. En una BD ya creada se aplica
+-- con database/migrations/002_reservas_sin_solapamiento.sql (scripts/deploy.sh la corre solo;
+-- falla si ya existen solapamientos activos: resolverlos antes).
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reservas_sin_solapamiento') THEN
+    ALTER TABLE reservas ADD CONSTRAINT reservas_sin_solapamiento
+      EXCLUDE USING gist (
+        cancha_id WITH =,
+        tsrange(fecha + hora_inicio, fecha + hora_fin) WITH &&
+      ) WHERE (estado IN ('pendiente', 'confirmada'));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_reservas_cancha_fecha ON reservas (cancha_id, fecha);
 CREATE INDEX IF NOT EXISTS idx_reservas_cliente      ON reservas (cliente_id);
 CREATE INDEX IF NOT EXISTS idx_reservas_estado       ON reservas (estado);

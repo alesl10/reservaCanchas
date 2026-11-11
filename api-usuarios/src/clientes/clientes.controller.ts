@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
-  ParseIntPipe, HttpCode, HttpStatus,
+  ParseIntPipe, HttpCode, HttpStatus, Headers, ForbiddenException,
 } from '@nestjs/common';
 import { ClientesService } from './clientes.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
@@ -43,7 +43,18 @@ export class ClientesController {
   }
 
   @Put(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateClienteDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateClienteDto,
+    @Headers('x-user-rol') rol?: string,
+    @Headers('x-cliente-id') clienteId?: string,
+  ) {
+    if (rol === 'cliente') {
+      // Defensa en profundidad (el gateway ya limita el acceso al propio perfil) y el
+      // tipo de cliente (descuento) no se autoasigna: solo lo cambia el admin.
+      if (!clienteId || +clienteId !== id) throw new ForbiddenException('No tenés acceso a este cliente');
+      delete dto.tipoClienteId;
+    }
     return this.clientesService.update(id, dto);
   }
 

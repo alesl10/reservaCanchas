@@ -1,4 +1,5 @@
-import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
+import { motivoDenegado } from './authz.policy';
 import { JwtService } from '@nestjs/jwt';
 import { Request, Response, NextFunction } from 'express';
 
@@ -41,10 +42,18 @@ export class AuthMiddleware implements NestMiddleware {
     if (!tieneToken) throw new UnauthorizedException('Token no proporcionado');
 
     const token = authHeader!.replace('Bearer ', '');
+    let payload: any;
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      payload = await this.jwtService.verifyAsync(token, {
         secret: process.env.JWT_SECRET,
       });
+    } catch {
+      // En una ruta pública un token vencido no debe romper la búsqueda: sigue como anónimo.
+      if (esPublica) return next();
+      throw new UnauthorizedException('Token inválido o expirado');
+    }
+
+    {
       // Inyectar info del usuario para que los microservicios la reciban
       req.headers['x-user-id'] = String(payload.sub);
       req.headers['x-user-email'] = payload.email;
@@ -54,11 +63,15 @@ export class AuthMiddleware implements NestMiddleware {
       if (payload.cliente_id != null) {
         req.headers['x-cliente-id'] = String(payload.cliente_id);
       }
+      const denegado = motivoDenegado({
+        method: req.method,
+        path: req.path,
+        query: req.query as Record<string, unknown>,
+        rol: payload.rol,
+        clienteId: payload.cliente_id != null ? String(payload.cliente_id) : undefined,
+      });
+      if (denegado) throw new ForbiddenException(denegado);
       next();
-    } catch {
-      // En una ruta pública un token vencido no debe romper la búsqueda: sigue como anónimo.
-      if (esPublica) return next();
-      throw new UnauthorizedException('Token inválido o expirado');
     }
   }
 }

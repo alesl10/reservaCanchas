@@ -68,11 +68,42 @@ apuntando a `postgresql://canchas_user:canchas_pass@localhost:5432/canchas_db`.
    ```
 6. Verificar: `curl http://<ip-reservada>:3000/auth/login ...` o los `/health` de cada servicio.
 
-> **HTTPS / dominio:** queda pendiente de definir. La IP reservada sola alcanza para `http://`, pero
-> el navegador puede bloquear que el frontend en Vercel (HTTPS) llame a un backend en `http://`
-> (mixed content) según el caso. Cuando se resuelva, la opción más simple es un dominio gratuito
-> (ej. DuckDNS) apuntando a la IP reservada + un reverse proxy con TLS automático (ej. Caddy) delante
-> del gateway.
+### HTTPS / dominio
+El VPS tiene un **proxy Caddy compartido** (carpeta `~/edge`, también lo usa otra app del VPS) que
+escucha en 80/443, saca el certificado de Let's Encrypt solo y publica el gateway en
+`https://api-canchas.<dominio>`. El proxy llega al contenedor `canchas_gateway` por la red docker `edge`.
+
+1. DNS: registro **A** `api-canchas.<dominio>` → IP reservada. Abrir `80` y `443` en la Security List
+   y en iptables (igual que el `3000` del paso 4).
+2. En el `.env` del VPS descomentar:
+   ```
+   COMPOSE_FILE=docker-compose.yml:docker-compose.vps.yml
+   ```
+   y aplicar con `docker compose up -d gateway`. `docker compose` y `scripts/deploy.sh` toman el
+   override solos; en las máquinas del equipo no cambia nada.
+3. Verificar: `curl https://api-canchas.<dominio>/canchas` (ruta pública).
+4. En **Vercel** cambiar `VITE_API_URL` a `https://api-canchas.<dominio>` y redeployar.
+5. Cuando el front ya use HTTPS, se puede cerrar el `3000` en la Security List (el puerto sigue
+   publicado en el compose para desarrollo local).
+
+#### Todo en un dominio: `https://reservacanchas.allcloud.com.ar` (frontend del VPS, sin Vercel)
+El proxy sirve el contenedor `canchas_frontend` en `/` y manda `/api/*` al gateway quitando el prefijo
+(bloque `{$CANCHAS_DOMAIN}` del Caddyfile en `cuentasClaras/deploy/edge`). Mismo origen: sin CORS ni
+mixed content.
+
+1. DNS: registro **A** `reservacanchas.allcloud.com.ar` → IP del VPS.
+2. En `~/edge/.env` agregar `CANCHAS_DOMAIN=reservacanchas.allcloud.com.ar`, copiar el Caddyfile nuevo
+   (`cp ~/cuentasClaras/deploy/edge/Caddyfile ~/edge/`) y recargar:
+   `docker compose -f ~/edge/docker-compose.yml exec caddy caddy reload --config /etc/caddy/Caddyfile`
+   (con la variable vacía Caddy no arranca).
+3. En `~/reservaCanchas/.env`: `COMPOSE_FILE=docker-compose.yml:docker-compose.vps.yml`,
+   `VITE_API_URL=https://reservacanchas.allcloud.com.ar/api` y
+   `FRONTEND_URL=https://reservacanchas.allcloud.com.ar`.
+4. Reconstruir el front (la URL se embebe en el bundle) y recrear el gateway/notificaciones/pagos:
+   `docker compose up -d --build frontend gateway api-pagos api-notificaciones`.
+5. Verificar: `https://reservacanchas.allcloud.com.ar` carga la app y
+   `curl https://reservacanchas.allcloud.com.ar/api/canchas` responde. Por IP (`:5173`, `:3000`) sigue
+   andando mientras los puertos estén abiertos.
 
 ---
 
